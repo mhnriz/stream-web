@@ -1,0 +1,20 @@
+{
+  "name": "stremio-dynamic-catalog",
+  "version": "1.0.0",
+  "description": "Netflix-style dynamic catalog addon for Stremio powered by Gemini",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "setup": "node setup.js",
+    "refresh": "node refresh.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "cors": "^2.8.5",
+    "node-cron": "^3.0.3",
+    "csv-parse": "^5.5.6",
+    "@google/generative-ai": "^0.21.0",
+    "dotenv": "^16.4.5"
+  }
+}

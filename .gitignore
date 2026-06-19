@@ -1,0 +1,20 @@
+# Environment — never commit real keys
+.env
+.env.local
+.env.*.local
+
+# Personal data — keep directory structure, ignore runtime json
+data/*.json
+dynamic-catalog/data/*.json
+
+# Dependencies
+node_modules/
+
+# Generated image outputs
+public/images/optimized/
+
+# Test screenshots
+shots/
+
+# Logs
+*.log

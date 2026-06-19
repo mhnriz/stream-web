@@ -1,0 +1,117 @@
+/* ═══════════════════════════════════════════════════════════════
+   StreamApp v1.3.0 — THEME SYSTEM (Dark / Light)
+   Dark is the default and matches the original v1.2.1 palette.
+   Light overrides every variable used in app.css for WCAG-AA
+   contrast (≥4.5:1 body text on background).
+
+   Theme is set via <html data-theme="dark|light">, bootstrapped
+   inline in index.html (before CSS paints) to avoid a flash of
+   wrong theme, then managed by initThemeToggle() in app.js.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─── Dark Theme (default — mirrors app.css :root) ──────────── */
+html[data-theme="dark"],
+html:not([data-theme]) {
+  --accent:         #BBE5ED;
+  --accent-dim:     rgba(187, 229, 237, 0.15);
+  --accent-glow:    rgba(187, 229, 237, 0.25);
+  --secondary:      #B399A2;
+  --hover:          #986C6A;
+  --bg-accent:      #784F41;
+  --muted:          #BFBCCB;
+  --bg:             #0F1118;
+  --bg-card:        rgba(255,255,255,0.03);
+  --bg-card-hover:  rgba(255,255,255,0.07);
+  --bg-elevated:    rgba(255,255,255,0.05);
+  --bg-glass:       rgba(15,17,24,0.85);
+  --bg-glass-heavy: rgba(15,17,24,0.95);
+  --border:         rgba(255,255,255,0.06);
+  --border-light:   rgba(255,255,255,0.1);
+  --text:           #E8E6F0;
+  --text-dim:       rgba(232,230,240,0.6);
+  --text-faint:     rgba(232,230,240,0.35);
+  --danger:         #E5737C;
+  --success:        #7CE5A8;
+  --warning:        #E5C77C;
+}
+
+/* ─── Light Theme ───────────────────────────────────────────── */
+html[data-theme="light"] {
+  /* Accent: deep teal-blue keeps the brand family but passes AA on white */
+  --accent:         #0B6B80;
+  --accent-dim:     rgba(11, 107, 128, 0.12);
+  --accent-glow:    rgba(11, 107, 128, 0.22);
+  --secondary:      #7A5B68;
+  --hover:          #6E4341;
+  --bg-accent:      #E7EEF1;
+  --muted:          #5A5766;
+  --bg:             #F7F8FA;
+  --bg-card:        rgba(15, 17, 24, 0.04);
+  --bg-card-hover:  rgba(15, 17, 24, 0.08);
+  --bg-elevated:    rgba(15, 17, 24, 0.06);
+  --bg-glass:       rgba(247, 248, 250, 0.85);
+  --bg-glass-heavy: rgba(247, 248, 250, 0.95);
+  --border:         rgba(15, 17, 24, 0.08);
+  --border-light:   rgba(15, 17, 24, 0.14);
+  --text:           #16181F;                  /* 15.6:1 on #F7F8FA */
+  --text-dim:       rgba(22, 24, 31, 0.66);   /* ~7:1 */
+  --text-faint:     rgba(22, 24, 31, 0.42);
+  --danger:         #B3261E;
+  --success:        #1E7B45;
+  --warning:        #8A6A00;
+}
+
+/* Light-mode fixups for hard-coded dark values in app.css */
+html[data-theme="light"] .sidebar {
+  background: rgba(247, 248, 250, 0.72);
+}
+html[data-theme="light"] .hero-gradient {
+  /* Backdrop photos stay dark — keep hero text white & readable */
+  --text: #FFFFFF;
+}
+html[data-theme="light"] .hero-content,
+html[data-theme="light"] .detail-hero-content {
+  color: #FFFFFF;
+  text-shadow: 0 1px 8px rgba(0,0,0,0.55);
+}
+html[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: rgba(15, 17, 24, 0.18);
+}
+html[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(15, 17, 24, 0.3);
+}
+/* Player surface always stays dark — video chrome on white is unusable */
+html[data-theme="light"] .player-overlay {
+  --bg: #0F1118;
+  --text: #E8E6F0;
+  --text-dim: rgba(232,230,240,0.6);
+  --border: rgba(255,255,255,0.06);
+  --bg-elevated: rgba(255,255,255,0.05);
+  color: var(--text);
+}
+
+/* ─── Theme transition ──────────────────────────────────────────
+   NOTE: the naive `html * { transition: ... }` rule animates every
+   element on every state change (hover, panel toggles) and tanks
+   scrolling perf on mobile (troubleshooting_guide Issue 23 class).
+   Instead we add .theme-transition for ~350ms only while switching
+   (applied/removed by setTheme() in app.js).                     */
+html.theme-transition,
+html.theme-transition body,
+html.theme-transition .sidebar,
+html.theme-transition .main-content,
+html.theme-transition .top-bar,
+html.theme-transition .card,
+html.theme-transition .browse-header,
+html.theme-transition .panel-list {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* ─── Theme toggle icon switching ───────────────────────────── */
+html[data-theme="dark"] .theme-icon-sun,
+html:not([data-theme]) .theme-icon-sun { display: none; }
+html[data-theme="dark"] .theme-icon-moon,
+html:not([data-theme]) .theme-icon-moon { display: inline; }
+
+html[data-theme="light"] .theme-icon-sun { display: inline; }
+html[data-theme="light"] .theme-icon-moon { display: none; }
