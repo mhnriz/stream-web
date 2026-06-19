@@ -121,7 +121,7 @@ export function initPlayer() {
     }
   });
 
-  seekBar.addEventListener('input', () => {
+  seekBar.addEventListener('change', () => {
     if (!video.duration) return;
     video.currentTime = (seekBar.value / 100) * video.duration;
   });
@@ -351,12 +351,12 @@ export function initPlayer() {
   const offsetLabel = audioPanel.querySelector('#sub-offset-label');
   audioPanel.querySelector('#sub-offset-minus')?.addEventListener('click', () => {
     _subOffset = Math.round((_subOffset - 0.5) * 10) / 10;
-    offsetLabel.textContent = `${_subOffset >= 0 ? '+' : ''}${_subOffset.toFixed(1)}s`;
+    offsetLabel.textContent = _subOffset === 0 ? '0.0s' : `${_subOffset > 0 ? '+' : ''}${_subOffset.toFixed(1)}s`;
     reloadSubtitleWithOffset();
   });
   audioPanel.querySelector('#sub-offset-plus')?.addEventListener('click', () => {
     _subOffset = Math.round((_subOffset + 0.5) * 10) / 10;
-    offsetLabel.textContent = `${_subOffset >= 0 ? '+' : ''}${_subOffset.toFixed(1)}s`;
+    offsetLabel.textContent = _subOffset === 0 ? '0.0s' : `${_subOffset > 0 ? '+' : ''}${_subOffset.toFixed(1)}s`;
     reloadSubtitleWithOffset();
   });
   audioPanel.querySelector('#sub-offset-reset')?.addEventListener('click', () => {
@@ -470,7 +470,7 @@ export function initPlayer() {
     const subsList = audioPanel.querySelector('#panel-subs-list');
     if (!query || !resultsEl) return;
 
-    resultsEl.innerHTML = '<div style="padding:8px 12px;color:var(--text-dim);font-size:0.75rem">Searching subdl.com…</div>';
+    resultsEl.innerHTML = '<div style="padding:8px 12px;color:var(--text-dim);font-size:0.75rem">Searching subtitles…</div>';
 
     try {
       const params = new URLSearchParams({ q: query });
@@ -489,7 +489,7 @@ export function initPlayer() {
       // Add a small header
       const hdr = document.createElement('div');
       hdr.style.cssText = 'padding:6px 12px 2px;font-size:0.68rem;color:var(--text-dim);text-transform:uppercase;font-weight:600';
-      hdr.textContent = `${subs.length} results from subdl.com`;
+      hdr.textContent = `${subs.length} subtitle results`;
       resultsEl.appendChild(hdr);
 
       subs.forEach(sub => {
@@ -681,6 +681,7 @@ export function initPlayer() {
   const endCardSeconds = document.getElementById('end-card-seconds');
   const endCardRingFill = document.getElementById('end-card-ring-fill');
   let _endCardTimer = null;
+  let _endCardDismissed = false;
 
   function showEndCard(nextEp, meta) {
     if (!endCard || !nextEp) return;
@@ -726,12 +727,15 @@ export function initPlayer() {
     }
   });
 
-  document.getElementById('end-card-cancel')?.addEventListener('click', hideEndCard);
+  document.getElementById('end-card-cancel')?.addEventListener('click', () => {
+    _endCardDismissed = true;
+    hideEndCard();
+  });
 
   // Show end card when 90% through a series episode
   video.addEventListener('timeupdate', () => {
     if (!currentPlayData?.nextEpisode || !video.duration) return;
-    if (endCard?.classList.contains('hidden') && !_endCardTimer) {
+    if (endCard?.classList.contains('hidden') && !_endCardTimer && !_endCardDismissed) {
       const pct = video.currentTime / video.duration;
       if (pct >= 0.90) showEndCard(currentPlayData.nextEpisode, currentPlayData.meta);
     }
@@ -739,7 +743,7 @@ export function initPlayer() {
 
   // Also show on ended
   window.addEventListener('hs-episode-ended', () => {
-    if (currentPlayData?.nextEpisode && endCard?.classList.contains('hidden') && !_endCardTimer) {
+    if (currentPlayData?.nextEpisode && endCard?.classList.contains('hidden') && !_endCardTimer && !_endCardDismissed) {
       showEndCard(currentPlayData.nextEpisode, currentPlayData.meta);
     }
   });
@@ -807,6 +811,7 @@ export function initPlayer() {
     if (offsetLabel) offsetLabel.textContent = '0.0s';
     // Reset skip intro and end card
     _skipIntroShown = false;
+    _endCardDismissed = false;
     skipIntroBtn?.classList.add('hidden');
     hideEndCard();
 

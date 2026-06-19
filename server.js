@@ -130,6 +130,11 @@ const LANG_MAP = {
   it: 'Italian', pt: 'Portuguese', ru: 'Russian', ja: 'Japanese', ko: 'Korean',
   zh: 'Chinese', nl: 'Dutch', pl: 'Polish', sv: 'Swedish', tr: 'Turkish',
   ms: 'Malay', id: 'Indonesian', th: 'Thai', hi: 'Hindi', fa: 'Persian',
+  // ISO 639-2 three-letter codes (Stremio/OpenSubtitles fallback)
+  eng: 'English', ara: 'Arabic', fra: 'French', spa: 'Spanish', deu: 'German',
+  ita: 'Italian', por: 'Portuguese', rus: 'Russian', jpn: 'Japanese', kor: 'Korean',
+  zho: 'Chinese', nld: 'Dutch', pol: 'Polish', swe: 'Swedish', tur: 'Turkish',
+  msa: 'Malay', ind: 'Indonesian', tha: 'Thai', hin: 'Hindi', fas: 'Persian',
 };
 
 // OpenSubtitles.com REST API v1 — requires free API key
@@ -486,7 +491,10 @@ app.get('/api/proxy', async (req, res) => {
     // Forward range header for seeking
     if (req.headers.range) headers.Range = req.headers.range;
 
-    const response = await fetch(url, { headers });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
+    const response = await fetch(url, { headers, signal: controller.signal });
+    clearTimeout(timeout);
 
     // Forward status and headers
     res.status(response.status);
@@ -515,8 +523,9 @@ app.get('/api/proxy', async (req, res) => {
     };
     pump().catch(() => res.end());
 
-    req.on('close', () => reader.cancel());
+    req.on('close', () => { clearTimeout(timeout); controller.abort(); reader.cancel(); });
   } catch (err) {
+    clearTimeout(timeout);
     res.status(500).send('Proxy error: ' + err.message);
   }
 });
@@ -616,8 +625,8 @@ app.post('/api/continue', (req, res) => {
   const entry = { id, type, title, poster, backdrop, currentTime, duration,
     progress: currentTime / duration, updatedAt: new Date().toISOString() };
 
-  if (idx >= 0) list[idx] = entry;
-  else list.unshift(entry);
+  if (idx >= 0) list.splice(idx, 1);
+  list.unshift(entry);
 
   // Keep last 30 items
   writeJSON(PROGRESS_FILE, list.slice(0, 30));

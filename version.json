@@ -67,11 +67,11 @@
       "date": "2026-06-13",
       "codeName": "Pocket",
       "changes": [
-        "\u23f1\ufe0f  Buffer hint updates every 1s instead of 3s (synchronous read, near-zero cost)",
-        "\ud83d\udd24 Subtitle offset control: +/- 0.5s buttons in Audio & Subtitles panel; server shifts VTT timestamps on the fly",
-        "\u25b6\ufe0f  TASK-07: Up Next end card \u2014 appears at 90% through a series episode, 10-second countdown, Play Now / Cancel",
-        "\u23ed\ufe0f  TASK-10: Skip Intro button \u2014 shown 5s\u2013240s into playback, seeks +90s on click, hides after use",
-        "\ud83d\udd07 TASK-12: Mute button icon swaps between speaker/mute; click toggles mute; volume slider synced"
+        "⏱️  Buffer hint updates every 1s instead of 3s (synchronous read, near-zero cost)",
+        "🔤 Subtitle offset control: +/- 0.5s buttons in Audio & Subtitles panel; server shifts VTT timestamps on the fly",
+        "▶️  TASK-07: Up Next end card — appears at 90% through a series episode, 10-second countdown, Play Now / Cancel",
+        "⏭️  TASK-10: Skip Intro button — shown 5s–240s into playback, seeks +90s on click, hides after use",
+        "🔇 TASK-12: Mute button icon swaps between speaker/mute; click toggles mute; volume slider synced"
       ]
     },
     {
@@ -79,12 +79,12 @@
       "date": "2026-06-13",
       "codeName": "Pocket",
       "changes": [
-        "\ud83d\udd04 Browse reload fix: catalogs fetched independently on hard reload (no longer depends on home being visited first); store populated for cross-page sharing",
-        "\ud83c\udfe0 Home reload fix: splash dismisses on any non-home route (was stuck visible on browse reload then home); uses store catalog cache from browse if available",
-        "\ud83d\udcf1 Mobile right gap fixed: max-width reset to 100vw on \u22641024px (was subtracting 68px sidebar)",
-        "\ud83d\udcf1 Mobile bottom nav gap fixed: dvh-aware margin-bottom + safe-area-inset-bottom",
-        "\u25b6\ufe0f  Player hint: permanent display (no fade); shows stream info + live buffer ahead (e.g. 45s buffered) updated every 3s",
-        "\ud83d\udd24 Subtitles: switched to OpenSubtitles.com v1 REST + Stremio fallback (no key needed for fallback)"
+        "🔄 Browse reload fix: catalogs fetched independently on hard reload (no longer depends on home being visited first); store populated for cross-page sharing",
+        "🏠 Home reload fix: splash dismisses on any non-home route (was stuck visible on browse reload then home); uses store catalog cache from browse if available",
+        "📱 Mobile right gap fixed: max-width reset to 100vw on ≤1024px (was subtracting 68px sidebar)",
+        "📱 Mobile bottom nav gap fixed: dvh-aware margin-bottom + safe-area-inset-bottom",
+        "▶️  Player hint: permanent display (no fade); shows stream info + live buffer ahead (e.g. 45s buffered) updated every 3s",
+        "🔤 Subtitles: switched to OpenSubtitles.com v1 REST + Stremio fallback (no key needed for fallback)"
       ]
     },
     {
@@ -92,12 +92,12 @@
       "date": "2026-06-13",
       "codeName": "Pocket",
       "changes": [
-        "\ud83c\udccf TASK-C: Browse grid cards fixed to pixel dimensions per breakpoint (160\u00d7240 desktop, 150\u00d7225 tablet, 135\u00d7202 large phone, 110\u00d7165 small phone) \u2014 no more variable heights",
-        "\ud83d\udd24 TASK-F: Subtitles switched to OpenSubtitles.com REST API v1 (set OPENSUBTITLES_API_KEY in .env) with Stremio addon fallback",
-        "\u25b6\ufe0f  TASK-02: Smart Resume \u2014 play button shows Resume S1E3 or Resume 42% for previously watched titles",
-        "\ud83d\udcca TASK-03: Episode progress bars \u2014 watched episodes show accent bar at bottom of thumbnail, completed ones show \u2713 badge",
-        "\ud83c\udff7\ufe0f  TASK-05: Content ratings \u2014 PG-13, TV-MA etc. shown in detail hero meta row as bordered badge",
-        "\ud83d\udd27 TASK-06: Stream loader padding removed (was offset by sidebar width on mobile); cast scroll has right-edge fade gradient"
+        "🃏 TASK-C: Browse grid cards fixed to pixel dimensions per breakpoint (160×240 desktop, 150×225 tablet, 135×202 large phone, 110×165 small phone) — no more variable heights",
+        "🔤 TASK-F: Subtitles switched to OpenSubtitles.com REST API v1 (set OPENSUBTITLES_API_KEY in .env) with Stremio addon fallback",
+        "▶️  TASK-02: Smart Resume — play button shows Resume S1E3 or Resume 42% for previously watched titles",
+        "📊 TASK-03: Episode progress bars — watched episodes show accent bar at bottom of thumbnail, completed ones show ✓ badge",
+        "🏷️  TASK-05: Content ratings — PG-13, TV-MA etc. shown in detail hero meta row as bordered badge",
+        "🔧 TASK-06: Stream loader padding removed (was offset by sidebar width on mobile); cast scroll has right-edge fade gradient"
       ]
     },
     {
@@ -105,11 +105,11 @@
       "date": "2026-06-13",
       "codeName": "Pocket",
       "changes": [
-        "\ud83c\udfac Player: restored original 5-bar buffering animation inside full-overlay \u2014 keeps the aesthetic, fixes z-index",
-        "\u25b6\ufe0f  Player: play icon nudged right 3px \u2014 visually centred in the circle button",
-        "\ud83c\udccf Browse grid: card-poster-wrap set to display:block with padding-bottom:150% \u2014 guaranteed 2:3 ratio regardless of inherited flex/width",
-        "\ud83c\udfe0 Home: hero TMDB metadata cached at module level \u2014 no re-fetch or rate-limit on return visits",
-        "\ud83c\udfe0 Home + Browse: all catalog data cached in module scope \u2014 returning to any tab is instant (no re-fetch until full page reload)"
+        "🎬 Player: restored original 5-bar buffering animation inside full-overlay — keeps the aesthetic, fixes z-index",
+        "▶️  Player: play icon nudged right 3px — visually centred in the circle button",
+        "🃏 Browse grid: card-poster-wrap set to display:block with padding-bottom:150% — guaranteed 2:3 ratio regardless of inherited flex/width",
+        "🏠 Home: hero TMDB metadata cached at module level — no re-fetch or rate-limit on return visits",
+        "🏠 Home + Browse: all catalog data cached in module scope — returning to any tab is instant (no re-fetch until full page reload)"
       ]
     },
     {
@@ -117,11 +117,11 @@
       "date": "2026-06-13",
       "codeName": "Pocket",
       "changes": [
-        "\ud83c\udccf Browse grid: card-poster-wrap uses aspect-ratio:2/3 with !important \u2014 fixes inconsistent heights caused by base width:160px not being overridden",
-        "\u23f3 Player: removed center overlay controls; RW/Play/FF moved into bottom bar centered between left and right groups",
-        "\u23f3 Player buffering: replaced bar animation with full-overlay spinner \u2014 always visible, no z-index fight",
-        "\ud83c\udfe0 Home: catalog data cached in module scope after first load \u2014 return visits render instantly without re-fetching",
-        "\ud83c\udfe0 Splash: only shown on first load; subsequent home navigations skip it entirely"
+        "🃏 Browse grid: card-poster-wrap uses aspect-ratio:2/3 with !important — fixes inconsistent heights caused by base width:160px not being overridden",
+        "⏳ Player: removed center overlay controls; RW/Play/FF moved into bottom bar centered between left and right groups",
+        "⏳ Player buffering: replaced bar animation with full-overlay spinner — always visible, no z-index fight",
+        "🏠 Home: catalog data cached in module scope after first load — return visits render instantly without re-fetching",
+        "🏠 Splash: only shown on first load; subsequent home navigations skip it entirely"
       ]
     },
     {
@@ -129,13 +129,13 @@
       "date": "2026-06-13",
       "codeName": "Pocket",
       "changes": [
-        "\u2705 Cache bust: all JS static imports now versioned with ?v= param \u2014 ensures Cloudflare/browser serves latest files",
-        "\u2b05\ufe0f Scroll arrows: class-based hide logic beats CSS hover specificity \u2014 arrows truly hide at edges",
-        "\ud83c\udccf Browse grid cards: responsive.css overrides now scoped to content-scroll only, browse-grid always uses 2:3 padding-bottom ratio",
-        "\u23f3 Buffering indicator: player-ui given explicit z-index:2, buffering z-index:15 \u2014 spinner always renders above controls",
-        "\u26a1 Speed sync: settings panel active item resets to 1x on new video load",
-        "\ud83c\udfac Splash screen: branded loading screen with progress bar replaces plain spinner \u2014 dismisses only after all catalogs are loaded",
-        "\ud83d\udd24 Subtitles: primary provider switched to OpenSubtitles.org legacy REST API (no key, parallel with subdl fallback)"
+        "✅ Cache bust: all JS static imports now versioned with ?v= param — ensures Cloudflare/browser serves latest files",
+        "⬅️ Scroll arrows: class-based hide logic beats CSS hover specificity — arrows truly hide at edges",
+        "🃏 Browse grid cards: responsive.css overrides now scoped to content-scroll only, browse-grid always uses 2:3 padding-bottom ratio",
+        "⏳ Buffering indicator: player-ui given explicit z-index:2, buffering z-index:15 — spinner always renders above controls",
+        "⚡ Speed sync: settings panel active item resets to 1x on new video load",
+        "🎬 Splash screen: branded loading screen with progress bar replaces plain spinner — dismisses only after all catalogs are loaded",
+        "🔤 Subtitles: primary provider switched to OpenSubtitles.org legacy REST API (no key, parallel with subdl fallback)"
       ]
     },
     {
@@ -143,25 +143,25 @@
       "date": "2026-06-13",
       "codeName": "Pocket",
       "changes": [
-        "\ud83c\udfac Player speed: bottom-bar cycle and settings panel now stay in sync \u2014 changing one updates the other",
-        "\u23f3 Player buffering: loading indicator z-index raised above controls so it's always visible",
-        "\ud83c\udccf Browse grid: card posters now consistent height (2:3 aspect ratio enforced via padding-bottom trick)",
-        "\ud83c\udfe0 Home catalogs: all 20 catalogs now fetched in parallel then rendered in one DOM pass \u2014 eliminates the sidebar-width glitch and staggered append layout shift",
-        "\u2b05\ufe0f Scroll arrows: left arrow hidden when at start, right arrow hidden when at end of each catalog row",
-        "\ud83d\udd24 Subtitles: replaced Stremio OpenSubtitles addon with subdl.com REST API \u2014 no API key needed, searches by IMDb ID + optional filename, returns language-labelled results, grouped by language with CC badges",
-        "\ud83d\udd24 Subtitles: manual search panel now has language filter dropdown, shows source as release name, passes IMDb ID for precision",
-        "\ud83d\udd24 Subtitles: SRT\u2192VTT conversion improved (handles CRLF, subtitles cached 24h)"
+        "🎬 Player speed: bottom-bar cycle and settings panel now stay in sync — changing one updates the other",
+        "⏳ Player buffering: loading indicator z-index raised above controls so it's always visible",
+        "🃏 Browse grid: card posters now consistent height (2:3 aspect ratio enforced via padding-bottom trick)",
+        "🏠 Home catalogs: all 20 catalogs now fetched in parallel then rendered in one DOM pass — eliminates the sidebar-width glitch and staggered append layout shift",
+        "⬅️ Scroll arrows: left arrow hidden when at start, right arrow hidden when at end of each catalog row",
+        "🔤 Subtitles: replaced Stremio OpenSubtitles addon with subdl.com REST API — no API key needed, searches by IMDb ID + optional filename, returns language-labelled results, grouped by language with CC badges",
+        "🔤 Subtitles: manual search panel now has language filter dropdown, shows source as release name, passes IMDb ID for precision",
+        "🔤 Subtitles: SRT→VTT conversion improved (handles CRLF, subtitles cached 24h)"
       ]
     },
     {
       "date": "2026-06-13",
       "codeName": "Pocket",
       "changes": [
-        "\ud83c\udfac Player: Handle video.ended \u2014 play button resets to replay icon; dispatches hs-episode-ended event for future autoplay/end-card hooks",
-        "\u26a1 Home: Hero metadata now fetched in parallel (Promise.allSettled) \u2014 cuts hero load time from ~1.5s sequential to ~300ms parallel",
-        "\ud83d\udc1b Player closePlayer: Fix clearTimeout(null) \u2192 clearTimeout(hideTimer) \u2014 cursor no longer disappears after closing player",
-        "\ud83e\uddf9 Player closePlayer: Remove duplicate subtitle track removal (was called twice)",
-        "\ud83c\udfaf Details play button: Show 'Loading episodes\u2026' toast and scroll to episodes section if clicked before episodes have loaded (was silently doing nothing)"
+        "🎬 Player: Handle video.ended — play button resets to replay icon; dispatches hs-episode-ended event for future autoplay/end-card hooks",
+        "⚡ Home: Hero metadata now fetched in parallel (Promise.allSettled) — cuts hero load time from ~1.5s sequential to ~300ms parallel",
+        "🐛 Player closePlayer: Fix clearTimeout(null) → clearTimeout(hideTimer) — cursor no longer disappears after closing player",
+        "🧹 Player closePlayer: Remove duplicate subtitle track removal (was called twice)",
+        "🎯 Details play button: Show 'Loading episodes…' toast and scroll to episodes section if clicked before episodes have loaded (was silently doing nothing)"
       ]
     },
     {
@@ -169,15 +169,15 @@
       "date": "2026-06-13",
       "codeName": "Pocket",
       "changes": [
-        "\ud83d\udcf1 Mobile-first responsive overhaul \u2014 5 breakpoints (\u2264430 / 431\u2013600 / 601\u20131024 / 1025\u20131400 / 1401+)",
-        "\ud83d\uddbc\ufe0f Responsive images \u2014 TMDB srcset variants (w185/w342/w500 posters, w780/w1280 backdrops) + local WebP/JPEG pipeline (scripts/optimize-images.js); ~80% image bandwidth reduction on phones",
-        "\ud83d\udc46 Touch controls \u2014 48px tap targets, 40px-tall seek bar, swipe to seek, vertical swipe for brightness (left) / volume (right), double-tap play/pause with on-screen feedback",
-        "\ud83d\udd76\ufe0f Incognito mode \u2014 top-bar toggle; watch progress & search history kept in memory only while ON (watchlist still saves); persists across reloads",
-        "\ud83c\udf17 Dark/light theme toggle \u2014 WCAG-AA light palette, system-preference detection, no-FOUC bootstrap, persisted choice",
-        "\u2328\ufe0f Keyboard shortcut \"C\" toggles subtitles; shortcuts no longer fire while typing in the subtitle search box",
-        "\u267f Accessibility \u2014 ARIA labels on nav/cards/player, skip-to-content link, visible :focus-visible rings, aria-live toasts, prefers-reduced-motion support",
-        "\ud83d\udcd0 Safe-area insets for notched phones (player bars + bottom nav)",
-        "\ud83e\uddf9 Bottom navigation now applies up to 1024px (tablets included)"
+        "📱 Mobile-first responsive overhaul — 5 breakpoints (≤430 / 431–600 / 601–1024 / 1025–1400 / 1401+)",
+        "🖼️ Responsive images — TMDB srcset variants (w185/w342/w500 posters, w780/w1280 backdrops) + local WebP/JPEG pipeline (scripts/optimize-images.js); ~80% image bandwidth reduction on phones",
+        "👆 Touch controls — 48px tap targets, 40px-tall seek bar, swipe to seek, vertical swipe for brightness (left) / volume (right), double-tap play/pause with on-screen feedback",
+        "🕶️ Incognito mode — top-bar toggle; watch progress & search history kept in memory only while ON (watchlist still saves); persists across reloads",
+        "🌗 Dark/light theme toggle — WCAG-AA light palette, system-preference detection, no-FOUC bootstrap, persisted choice",
+        "⌨️ Keyboard shortcut \"C\" toggles subtitles; shortcuts no longer fire while typing in the subtitle search box",
+        "♿ Accessibility — ARIA labels on nav/cards/player, skip-to-content link, visible :focus-visible rings, aria-live toasts, prefers-reduced-motion support",
+        "📐 Safe-area insets for notched phones (player bars + bottom nav)",
+        "🧹 Bottom navigation now applies up to 1024px (tablets included)"
       ]
     },
     {
@@ -185,27 +185,27 @@
       "date": "2025-06-01",
       "codeName": "Premiere",
       "changes": [
-        "\u2728 Initial release - Complete SPA streaming platform",
-        "\ud83c\udfac Full video player with advanced controls",
-        "\ud83d\udd0d Instant search with debounce",
-        "\ud83c\udfa8 Premium dark theme with glassmorphism",
-        "\ud83d\udcf1 Responsive mobile design",
-        "\ud83d\udd17 TMDB, TorBox, Stremio integrations",
-        "\u26a1 Smart stream filtering (regex-based)",
-        "\ud83d\udcca Stream source cleanup and deduplication",
-        "\ud83c\udfaf Inline episode streams below episodes",
-        "\ud83c\udfb5 Audio & Subtitles panel in player",
-        "\ud83d\udcbe Progress saving (15s intervals)",
-        "\u2764\ufe0f Watchlist and continue watching",
-        "\ud83c\udf10 Browser-friendly format detection",
-        "\ud83d\udce7 OpenSubtitles integration",
-        "\ud83c\udfaa Multi-language subtitle support"
+        "✨ Initial release - Complete SPA streaming platform",
+        "🎬 Full video player with advanced controls",
+        "🔍 Instant search with debounce",
+        "🎨 Premium dark theme with glassmorphism",
+        "📱 Responsive mobile design",
+        "🔗 TMDB, TorBox, Stremio integrations",
+        "⚡ Smart stream filtering (regex-based)",
+        "📊 Stream source cleanup and deduplication",
+        "🎯 Inline episode streams below episodes",
+        "🎵 Audio & Subtitles panel in player",
+        "💾 Progress saving (15s intervals)",
+        "❤️ Watchlist and continue watching",
+        "🌐 Browser-friendly format detection",
+        "📧 OpenSubtitles integration",
+        "🎪 Multi-language subtitle support"
       ]
     }
   ],
   "environment": {
     "nodeVersion": "18+",
-    "port": 3000,
+    "port": 3001,
     "supportedBrowsers": [
       "Chrome 90+",
       "Firefox 88+",

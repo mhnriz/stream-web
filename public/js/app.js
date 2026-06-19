@@ -351,7 +351,9 @@ router.resolve = function() {
 
 // Handle hs-navigate from player end card (next episode)
 window.addEventListener('hs-navigate', (e) => {
-  const { path } = e.detail;
+  const { path, resumeSeason, resumeEpisode } = e.detail;
+  if (resumeSeason != null) sessionStorage.setItem('hs-resume-season', resumeSeason);
+  if (resumeEpisode != null) sessionStorage.setItem('hs-resume-episode', resumeEpisode);
   if (path) router.navigate(path);
 });
 

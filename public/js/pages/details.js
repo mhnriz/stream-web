@@ -204,6 +204,10 @@ export default async function renderDetails(container, router, params) {
   if (type === 'series' && meta.seasons?.length) {
     loadEpisodes(container, meta, meta.seasons[0].number, router, continueListForProgress).then(() => {
       episodesReady = true;
+      // Auto-play if arriving from end card navigation
+      if (sessionStorage.getItem('hs-resume-season')) {
+        container.querySelector('#detail-play-btn')?.click();
+      }
     });
 
     container.querySelectorAll('.season-tab').forEach(tab => {
@@ -239,10 +243,12 @@ export default async function renderDetails(container, router, params) {
         window.addEventListener('hs-play', handler, { once: true });
       }
     } else {
-      // Check for resume episode
+      // Check for resume episode (from end card navigation or continue-watching)
       const btn = container.querySelector('#detail-play-btn');
-      const rS = btn?.dataset?.resumeSeason;
-      const rE = btn?.dataset?.resumeEpisode;
+      const rS = sessionStorage.getItem('hs-resume-season') || btn?.dataset?.resumeSeason;
+      const rE = sessionStorage.getItem('hs-resume-episode') || btn?.dataset?.resumeEpisode;
+      sessionStorage.removeItem('hs-resume-season');
+      sessionStorage.removeItem('hs-resume-episode');
       if (rS && rE) {
         // Find and click the specific episode
         const epEl = container.querySelector(`.episode-item[data-season="${rS}"][data-episode="${rE}"]`);
