@@ -1457,6 +1457,38 @@ input, select { font-family: inherit; }
 }
 
 .player-ui.hide-cursor { cursor: none; opacity: 0; }
+.player-ui.embed-mode { background: transparent; }
+
+/* ─── Stream Picker ─────────────────────────────────────── */
+.stream-picker {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 5;
+  background: rgba(15,17,24,0.92);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  padding: 20px;
+  min-width: 300px; max-width: 460px; width: 90%;
+  max-height: 60vh; overflow-y: auto;
+}
+.picker-header { font-size: 0.82rem; font-weight: 600; color: var(--text); margin-bottom: 12px; }
+.picker-list { display: flex; flex-direction: column; gap: 4px; }
+.picker-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; border-radius: 10px;
+  border: 1px solid transparent; cursor: pointer;
+  font-size: 0.8rem; color: var(--text-dim);
+  transition: background 0.1s;
+}
+.picker-item:hover { background: var(--bg-elevated); color: var(--text); }
+.picker-item.scanning { background: var(--bg-elevated); color: var(--text); }
+.picker-item.active { background: var(--accent-dim); border-color: var(--accent); color: var(--text); }
+.picker-quality { font-weight: 700; color: var(--accent); min-width: 36px; }
+.picker-tracker { flex: 1; }
+.picker-source { color: var(--text-faint); font-size: 0.73rem; }
+.picker-browser { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; background: var(--accent-dim); color: var(--accent); }
 
 .player-top-bar {
   display: flex;

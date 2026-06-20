@@ -34,12 +34,13 @@ const API = {
   },
 
   // ─── Streams ───────────────────────────────────────────────
-  async getStreams(type, imdbId, season, episode, runtime) {
+  async getStreams(type, imdbId, season, episode, runtime, tmdbId) {
     let url = `/api/streams/${type}/${imdbId}`;
     const params = new URLSearchParams();
     if (season) params.set('s', season);
     if (episode) params.set('e', episode);
     if (runtime) params.set('runtime', runtime);
+    if (tmdbId) params.set('tmdb', tmdbId);
     if (params.toString()) url += `?${params}`;
     const res = await fetch(url);
     return res.json();

@@ -374,110 +374,77 @@ app.get('/api/streams/:type/:imdbId', async (req, res) => {
   const { type, imdbId } = req.params;
   const season = req.query.s;
   const episode = req.query.e;
-  const runtime = parseInt(req.query.runtime) || (type === 'movie' ? 120 : 24);
+  const tmdbId = req.query.tmdb; // for embed sources
 
   try {
+    // Embed sources — Vidsync + VIDEASY (TorBox disabled for testing)
+    const embedStreams = [];
+    if (tmdbId) {
+      // Active source
+      const videasyUrl = type === 'movie'
+        ? `https://player.videasy.net/movie/${tmdbId}`
+        : `https://player.videasy.net/tv/${tmdbId}/${season}/${episode}`;
+
+      embedStreams.push({
+        title: 'VIDEASY',
+        quality: 'HD',
+        source: 'Embed',
+        tracker: 'VIDEASY',
+        addonName: 'VIDEASY',
+        embedUrl: videasyUrl,
+        embedSource: 'videasy',
+        cached: true,
+        browserFriendly: true,
+      });
+
+      // Disabled sources — available for future use
+      // const vidsyncUrl = type === 'movie'
+      //   ? `https://vidsync.live/embed/movie/${tmdbId}?autoPlay=true&defaultServer=cinevault`
+      //   : `https://vidsync.live/embed/tv/${tmdbId}/${season}/${episode}?autoPlay=true&defaultServer=cinevault&nextButton=false&autoNext=false`;
+      // embedStreams.push({ title: 'Vidsync', quality: 'HD', source: 'Embed', tracker: 'Vidsync', addonName: 'Vidsync', embedUrl: vidsyncUrl, embedSource: 'vidsync', cached: true, browserFriendly: true });
+
+      // const vidapiUrl = type === 'movie'
+      //   ? `https://vaplayer.ru/embed/movie/${tmdbId}`
+      //   : `https://vaplayer.ru/embed/tv/${tmdbId}/${season}/${episode}`;
+      // embedStreams.push({ title: 'VidAPI', quality: 'HD', source: 'Embed', tracker: 'VidAPI', addonName: 'VidAPI', embedUrl: vidapiUrl, embedSource: 'vidapi', cached: true, browserFriendly: true });
+
+      // const vidcoreUrl = type === 'movie'
+      //   ? `https://vidcore.net/movie/${tmdbId}`
+      //   : `https://vidcore.net/tv/${tmdbId}/${season}/${episode}?nextButton=false&autoNext=false`;
+      // embedStreams.push({ title: 'VidCore', quality: 'HD', source: 'Embed', tracker: 'VidCore', addonName: 'VidCore', embedUrl: vidcoreUrl, embedSource: 'vidcore', cached: true, browserFriendly: true });
+    }
+
+    // Torrent streams from addons (TorBox cache check disabled)
     const streams = await getStreams(type, imdbId, season, episode);
-
-    // Check which hashes are cached on TorBox
-    const hashes = streams.filter((s) => s.infoHash).map((s) => s.infoHash);
-    const cachedSet = hashes.length > 0 ? await checkCachedBatch(hashes) : new Set();
-
-    // Tag streams
     const taggedStreams = streams
       .filter((s) => s.quality !== 'Unknown')
-      .map((s) => ({
-        ...s,
-        cached: s.url ? true : (s.infoHash && cachedSet.has(s.infoHash.toLowerCase())),
-      }));
+      .map((s) => ({ ...s, cached: false }));
 
-    // Sort: cached first, then by quality, then by seeds
     const qualityOrder = { '4K': 0, '1080p': 1, '720p': 2, '480p': 3, CAM: 4, Unknown: 5 };
     taggedStreams.sort((a, b) => {
-      if (a.cached && !b.cached) return -1;
-      if (!a.cached && b.cached) return 1;
       const qDiff = (qualityOrder[a.quality] ?? 5) - (qualityOrder[b.quality] ?? 5);
       if (qDiff !== 0) return qDiff;
       return (b.seeds || 0) - (a.seeds || 0);
     });
 
-    // Score streams for auto-selection
-    let bestScore = -1;
-    let bestIdx = -1;
-
-    taggedStreams.forEach((s, i) => {
-      if (!s.cached) return;
-      let score = 0;
-
-      // Browser compatibility (biggest factor)
-      if (s.browserFriendly) score += 30;
-
-      // Quality
-      if (s.quality === '1080p') score += 20;
-      else if (s.quality === '720p') score += 12;
-      else if (s.quality === '4K') score += 8;
-      else if (s.quality === '480p') score += 5;
-
-      // Codec (H.264 works everywhere)
-      if (s.codec === 'H.264' || s.codec === '') score += 15;
-      else if (s.codec === 'HEVC') score += 5;
-      else if (s.codec === 'AV1') score += 3;
-
-      // Source (WEB-DL/WEBRip = browser-safe audio)
-      if (/WEB-DL|WEBRip/.test(s.source)) score += 10;
-
-      // Size sweet spot based on runtime
-      const sizeMatch = (s.size || '').match(/([\d.]+)\s*(GB|MB)/i);
-      if (sizeMatch) {
-        const mb = sizeMatch[2].toUpperCase() === 'GB'
-          ? parseFloat(sizeMatch[1]) * 1024
-          : parseFloat(sizeMatch[1]);
-        const idealMin = runtime * 8;   // ~8 MB/min
-        const idealMax = runtime * 40;  // ~40 MB/min
-        if (mb >= idealMin && mb <= idealMax) score += 20;
-        else if (mb < idealMin * 0.5) score -= 10;
-        else if (mb > idealMax * 2) score -= 5;
-      }
-
-      // Seeds (minor for cached)
-      score += Math.min((s.seeds || 0) / 10, 5);
-
-      if (score > bestScore) {
-        bestScore = score;
-        bestIdx = i;
-      }
-    });
-
-    if (bestIdx >= 0) {
-      taggedStreams[bestIdx].recommended = true;
-      // Move recommended to the top
-      const [rec] = taggedStreams.splice(bestIdx, 1);
-      taggedStreams.unshift(rec);
-    }
-
-    res.json(taggedStreams);
+    res.json([...embedStreams, ...taggedStreams]);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// ─── TorBox (resolve stream to playback URL) ─────────────────────────
+// ─── Play endpoint ───────────────────────────────────────────────────
 
 app.post('/api/play', async (req, res) => {
   const { infoHash, fileIdx, url } = req.body;
 
-  // If it's a direct URL stream, just return it
+  // Direct URL stream — proxy it
   if (url) return res.json({ playbackUrl: `/api/proxy?url=${encodeURIComponent(url)}` });
 
-  if (!infoHash) return res.status(400).json({ error: 'Missing infoHash' });
+  // TorBox disabled for embed source testing
+  if (infoHash) return res.status(503).json({ error: 'TorBox temporarily disabled — use embed sources' });
 
-  try {
-    const torboxUrl = await resolveStream(infoHash, fileIdx || 0);
-    // Return proxied URL so we bypass CORS
-    res.json({ playbackUrl: `/api/proxy?url=${encodeURIComponent(torboxUrl)}` });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  return res.status(400).json({ error: 'Missing stream info' });
 });
 
 // Video proxy — pipes TorBox stream through our server to bypass CORS
@@ -650,6 +617,6 @@ app.get('*', (req, res) => {
 app.listen(PORT, process.env.HOST || '0.0.0.0', () => {
   console.log(`\n🎬 ${APP_NAME} running at http://localhost:${PORT}`);
   console.log(`   Catalog source: ${CATALOG_URL}`);
-  console.log(`   TorBox: ${process.env.TORBOX_API_KEY ? '✅ configured' : '❌ missing'}`);
+  console.log(`   TorBox: ⏸ disabled (embed source testing mode)`);
   console.log(`   TMDB:   ${process.env.TMDB_API_KEY ? '✅ configured' : '❌ missing'}`);
 });

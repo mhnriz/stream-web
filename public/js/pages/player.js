@@ -12,6 +12,21 @@ let hideTimer = null;
 let progressInterval = null;
 let currentPlayData = null;
 let gestureHandler = null;
+let isEmbedMode = false;
+let _pickerScanTimer = null;
+let _pickerCountTimer = null;
+let _playerHistoryPushed = false;
+let _embedLastTime = 0;
+let _embedLastDuration = 0;
+let _embedProgressSaveAt = 0;
+
+function closePicker() {
+  document.getElementById('stream-picker')?.classList.add('hidden');
+  clearInterval(_pickerScanTimer);
+  clearInterval(_pickerCountTimer);
+  _pickerScanTimer = null;
+  _pickerCountTimer = null;
+}
 const IS_TOUCH = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
 /** Incognito-aware progress save — no-op while incognito is ON. */
@@ -51,8 +66,9 @@ export function initPlayer() {
     ui.classList.remove('hide-cursor');
     clearTimeout(hideTimer);
     hideTimer = setTimeout(() => {
-      if (!video.paused) ui.classList.add('hide-cursor');
-    }, 3000);
+      if (isEmbedMode) ui.classList.add('hide-cursor');        // embed: hide top bar after 5s
+      else if (!video.paused) ui.classList.add('hide-cursor'); // video: hide controls when playing
+    }, isEmbedMode ? 6000 : 3000);
   }
 
   overlay.addEventListener('mousemove', showUI);
@@ -530,6 +546,11 @@ export function initPlayer() {
 
   backBtn.addEventListener('click', closePlayer);
 
+  // Intercept browser back button — close player instead of navigating away
+  window.addEventListener('popstate', () => {
+    if (!overlay.classList.contains('hidden')) closePlayer();
+  }, { capture: true });
+
   // ─── Keyboard Shortcuts ───────────────────────────────────
 
   let lastSubtitleUrl = null; // remembered so "C" can re-enable the last track
@@ -551,6 +572,7 @@ export function initPlayer() {
 
   function handleKeyboard(e) {
     if (overlay.classList.contains('hidden')) return;
+    if (isEmbedMode) { if (e.key === 'Escape') closePlayer(); return; }
     // Never hijack keys while the user is typing (e.g. subtitle search) —
     // except Escape, which blurs the field and closes the open panel.
     if (e.target.matches('input, textarea, select') && e.target.closest('.player-panel')) {
@@ -748,10 +770,158 @@ export function initPlayer() {
     }
   });
 
+  // ─── Embed player postMessage → Up Next card ─────────────────
+  // Vidsync fires VIDSYNC_PLAYER_EVENT; VIDEASY fires a JSON string
+
+  window.addEventListener('message', (event) => {
+    if (!isEmbedMode) return;
+    // ponytail: temp debug — remove once postMessage confirmed working
+    if (typeof event.data === 'string') console.debug('[embed] postMessage:', event.data.slice(0, 120));
+
+    const msg = event.data;
+    let currentTime = 0, duration = 0, ended = false;
+
+    if (msg?.type === 'VIDSYNC_PLAYER_EVENT') {
+      currentTime = msg.data?.currentTime || 0;
+      duration    = msg.data?.duration    || 0;
+      ended       = msg.data?.event === 'ended';
+    } else if (msg?.type === 'PLAYER_EVENT' && msg?.data?.player_status != null) {
+      currentTime = msg.data.player_progress || 0;
+      duration    = msg.data.player_duration || 0;
+      ended       = msg.data.player_status === 'completed';
+    } else if (msg?.type === 'PLAYER_EVENT' && msg?.data?.event != null) {
+      currentTime = msg.data.currentTime || 0;
+      duration    = msg.data.duration    || 0;
+      ended       = msg.data.event === 'ended';
+    } else if (typeof msg === 'string') {
+      try {
+        const d = JSON.parse(msg);
+        if (d?.timestamp != null && d?.duration) {
+          currentTime = d.timestamp;
+          duration    = d.duration;
+        }
+      } catch {}
+    }
+
+    if (!duration) return;
+
+    // Track latest position for closePlayer final save
+    _embedLastTime = currentTime;
+    _embedLastDuration = duration;
+
+    // Throttle-save every 10s
+    const now = Date.now();
+    if (currentPlayData && currentTime > 5 && now - _embedProgressSaveAt > 10000) {
+      _embedProgressSaveAt = now;
+      const { meta, season, episode } = currentPlayData;
+      saveProgressIfAllowed({
+        id: meta.id + (season ? `:${season}:${episode}` : ''),
+        type: meta.type,
+        title: $('#player-title').textContent,
+        poster: meta.poster,
+        backdrop: meta.backdrop,
+        currentTime,
+        duration,
+      });
+    }
+
+    // Up Next end card
+    if (currentPlayData?.nextEpisode && !_endCardDismissed && !_endCardTimer) {
+      if (endCard && !endCard.classList.contains('hidden')) return;
+      if (ended || currentTime / duration >= 0.9) {
+        showEndCard(currentPlayData.nextEpisode, currentPlayData.meta);
+      }
+    }
+  });
+
+  // ─── Stream Picker ────────────────────────────────────────
+
+  window.addEventListener('hs-open-picker', (e) => {
+    const { streams, title, meta, season, episode, nextEpisode } = e.detail;
+
+    overlay.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    if (!_playerHistoryPushed) { history.pushState({ player: true }, '', location.href); _playerHistoryPushed = true; }
+    $('#player-title').textContent = title || '';
+
+    const pickerPanel = document.getElementById('stream-picker');
+    const pickerList = document.getElementById('picker-list');
+    const pickerCount = document.getElementById('picker-count');
+    const pickerAuto = document.getElementById('picker-auto');
+
+    pickerPanel.classList.remove('hidden');
+    if (pickerAuto) pickerAuto.classList.add('hidden');
+
+    pickerList.innerHTML = streams.map((s, i) => {
+      const tracker = s.tracker || s.addonName || 'Unknown';
+      return `<div class="picker-item" data-idx="${i}">
+        <span class="picker-quality">${s.quality}</span>
+        <span class="picker-tracker">${tracker}</span>
+        ${s.source ? `<span class="picker-source">${s.source}</span>` : ''}
+        ${s.size ? `<span class="picker-source">${s.size}</span>` : ''}
+        ${s.browserFriendly ? '<span class="picker-browser">Browser</span>' : ''}
+      </div>`;
+    }).join('');
+
+    const items = [...pickerList.querySelectorAll('.picker-item')];
+
+    items.forEach((el, i) => {
+      el.addEventListener('click', () => {
+        closePicker();
+        _dispatchPickedStream(streams[i], i, e.detail);
+      });
+    });
+
+    // Scan through items, land on index 0
+    let scanIdx = 0;
+    clearInterval(_pickerScanTimer);
+    _pickerScanTimer = setInterval(() => {
+      items.forEach(el => el.classList.remove('scanning'));
+      if (scanIdx < items.length) {
+        items[scanIdx].classList.add('scanning');
+        scanIdx++;
+      } else {
+        clearInterval(_pickerScanTimer);
+        items.forEach(el => el.classList.remove('scanning'));
+        if (items[0]) items[0].classList.add('active');
+        // Countdown
+        let remaining = 2;
+        if (pickerCount) pickerCount.textContent = remaining;
+        if (pickerAuto) pickerAuto.classList.remove('hidden');
+        clearInterval(_pickerCountTimer);
+        _pickerCountTimer = setInterval(() => {
+          remaining--;
+          if (pickerCount) pickerCount.textContent = remaining;
+          if (remaining <= 0) {
+            clearInterval(_pickerCountTimer);
+            closePicker();
+            _dispatchPickedStream(streams[0], 0, e.detail);
+          }
+        }, 1000);
+      }
+    }, 60);
+  });
+
+  function _dispatchPickedStream(stream, streamIdx, detail) {
+    const { meta, season, episode, nextEpisode, streams, title, resumeTime } = detail;
+    const streamInfo = { quality: stream.quality, source: stream.source, codec: stream.codec, size: stream.size, tracker: stream.tracker || stream.addonName };
+    const baseDetail = { title, meta, season, episode, nextEpisode, streams, currentStreamIdx: streamIdx, streamInfo };
+    if (stream.embedUrl) {
+      let embedUrl = stream.embedUrl;
+      if (resumeTime > 0) embedUrl += (embedUrl.includes('?') ? '&' : '?') + `progress=${Math.floor(resumeTime)}`;
+      window.dispatchEvent(new CustomEvent('hs-play', { detail: { ...baseDetail, embedUrl, embedSource: stream.embedSource } }));
+    } else {
+      toast('Resolving stream...', 'info');
+      API.resolvePlayback(stream).then(url => {
+        window.dispatchEvent(new CustomEvent('hs-play', { detail: { ...baseDetail, url } }));
+      }).catch(err => toast('Failed: ' + err.message, 'error'));
+    }
+  }
+
   // ─── Public: Open Player ──────────────────────────────────
 
   window.addEventListener('hs-play', async (e) => {
-    const { url, title, meta, season, episode, streamInfo, nextEpisode, streams, currentStreamIdx } = e.detail;
+    const { url, embedUrl, embedSource, title, meta, season, episode, streamInfo, nextEpisode, streams, currentStreamIdx } = e.detail;
     currentPlayData = { meta, season, episode, nextEpisode, streams, currentStreamIdx };
 
     // Store meta globally so manual subtitle search can use imdb_id
@@ -760,6 +930,7 @@ export function initPlayer() {
     $('#player-title').textContent = title || 'Playing';
     overlay.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
+    if (!_playerHistoryPushed) { history.pushState({ player: true }, '', location.href); _playerHistoryPushed = true; }
 
     // Player hint — permanent display with stream info + live download speed
     const hint = document.getElementById('player-hint');
@@ -815,44 +986,86 @@ export function initPlayer() {
     skipIntroBtn?.classList.add('hidden');
     hideEndCard();
 
-    // Clear previous subtitles
-    video.querySelectorAll('track').forEach(t => t.remove());
-    for (let t of video.textTracks) t.mode = 'disabled';
+    const embedWrap = document.getElementById('embed-player-wrap');
+    const embedIframe = document.getElementById('embed-iframe');
 
-    // Load video
-    video.src = url;
-    const buf = document.getElementById('player-buffering');
-    if (buf) buf.classList.add('active');
-    try {
-      await video.play();
-    } catch { /* autoplay might be blocked */ }
+    if (embedUrl) {
+      // ── Embed mode (Vidsync, VIDEASY, etc.) ─────────────────
+      isEmbedMode = true;
+      video.classList.add('hidden');
+      ui.classList.add('embed-mode');
+      ui.querySelector('.player-bottom-bar')?.classList.add('hidden');
+      ui.querySelector('#player-settings-btn')?.classList.add('hidden');
+      // Pass clicks through to iframe — only top bar stays interactive
+      ui.style.pointerEvents = 'none';
+      ui.querySelector('.player-top-bar').style.pointerEvents = 'all';
+      ui.classList.remove('hide-cursor');
+      clearTimeout(hideTimer);
+      // Hide buffering spinner — embed player handles its own loading state
+      const buf = document.getElementById('player-buffering');
+      if (buf) buf.classList.remove('active');
 
-    showUI();
+      // Inject theme color into embed URL
+      const theme = document.documentElement.dataset.theme || 'dark';
+      const accentHex = theme === 'light' ? '0B6B80' : 'BBE5ED';
+      // vidsync/vidcore: theme=HEX  |  vidapi: color=%23HEX  |  videasy: color=HEX
+      const colorParam = (embedSource === 'vidsync' || embedSource === 'vidcore') ? `theme=${accentHex}`
+                       : embedSource === 'vidapi'  ? `color=%23${accentHex}`
+                       : `color=${accentHex}`;
+      const themedUrl = embedUrl + (embedUrl.includes('?') ? '&' : '?') + colorParam;
 
-    // Load subtitles — pass stream tracker/title as filename hint for better matching
-    if (window.loadAudioSubtitles) {
-      const filename = streamInfo?.tracker || streamInfo?.title || '';
-      window.loadAudioSubtitles(meta, season, episode, filename);
+      if (embedWrap) embedWrap.classList.remove('hidden');
+      if (embedIframe) embedIframe.src = themedUrl;
+
+      clearInterval(progressInterval);
+      // ponytail: postMessage progress from embed players saved on message event
+      progressInterval = null;
+    } else {
+      // ── Video mode ───────────────────────────────────────────
+      isEmbedMode = false;
+      video.classList.remove('hidden');
+      ui.querySelector('.player-bottom-bar')?.classList.remove('hidden');
+      if (embedWrap) embedWrap.classList.add('hidden');
+      if (embedIframe) embedIframe.src = '';
+
+      // Clear previous subtitles
+      video.querySelectorAll('track').forEach(t => t.remove());
+      for (let t of video.textTracks) t.mode = 'disabled';
+
+      video.src = url;
+      const buf = document.getElementById('player-buffering');
+      if (buf) buf.classList.add('active');
+      try {
+        await video.play();
+      } catch { /* autoplay might be blocked */ }
+
+      // Load subtitles — pass stream tracker/title as filename hint for better matching
+      if (window.loadAudioSubtitles) {
+        const filename = streamInfo?.tracker || streamInfo?.title || '';
+        window.loadAudioSubtitles(meta, season, episode, filename);
+      }
+
+      // Reset any brightness filter / pending gesture from the previous video
+      if (gestureHandler) gestureHandler.reset();
+
+      // Save progress periodically — skipped entirely in incognito mode
+      clearInterval(progressInterval);
+      progressInterval = setInterval(() => {
+        if (video.currentTime > 0 && video.duration > 0) {
+          saveProgressIfAllowed({
+            id: meta.id + (season ? `:${season}:${episode}` : ''),
+            type: meta.type,
+            title: title,
+            poster: meta.poster,
+            backdrop: meta.backdrop,
+            currentTime: video.currentTime,
+            duration: video.duration,
+          });
+        }
+      }, 15000);
     }
 
-    // Reset any brightness filter / pending gesture from the previous video
-    if (gestureHandler) gestureHandler.reset();
-
-    // Save progress periodically — skipped entirely in incognito mode
-    clearInterval(progressInterval);
-    progressInterval = setInterval(() => {
-      if (video.currentTime > 0 && video.duration > 0) {
-        saveProgressIfAllowed({
-          id: meta.id + (season ? `:${season}:${episode}` : ''),
-          type: meta.type,
-          title: title,
-          poster: meta.poster,
-          backdrop: meta.backdrop,
-          currentTime: video.currentTime,
-          duration: video.duration,
-        });
-      }
-    }, 15000);
+    showUI();
   });
 }
 
@@ -863,21 +1076,55 @@ function closePlayer() {
   const video = $('#video-player');
 
   // Save final progress — skipped in incognito mode
-  if (currentPlayData && video.currentTime > 0 && video.duration > 0) {
+  if (currentPlayData) {
     const { meta, season, episode } = currentPlayData;
-    saveProgressIfAllowed({
-      id: meta.id + (season ? `:${season}:${episode}` : ''),
-      type: meta.type,
-      title: $('#player-title').textContent,
-      poster: meta.poster,
-      backdrop: meta.backdrop,
-      currentTime: video.currentTime,
-      duration: video.duration,
-    });
+    const t = isEmbedMode ? _embedLastTime : video.currentTime;
+    const d = isEmbedMode ? _embedLastDuration : video.duration;
+    if (t > 0 && d > 0) {
+      saveProgressIfAllowed({
+        id: meta.id + (season ? `:${season}:${episode}` : ''),
+        type: meta.type,
+        title: $('#player-title').textContent,
+        poster: meta.poster,
+        backdrop: meta.backdrop,
+        currentTime: t,
+        duration: d,
+      });
+    }
   }
+  // Notify details page to refresh play button
+  if (currentPlayData) {
+    const { meta, season, episode } = currentPlayData;
+    const t = isEmbedMode ? _embedLastTime : video.currentTime;
+    const d = isEmbedMode ? _embedLastDuration : video.duration;
+    window.dispatchEvent(new CustomEvent('hs-player-closed', { detail: { meta, season, episode, currentTime: t, duration: d } }));
+  }
+
+  _embedLastTime = 0;
+  _embedLastDuration = 0;
+  _embedProgressSaveAt = 0;
 
   // Clear gesture side-effects (brightness filter persists otherwise)
   video.style.filter = '';
+
+  closePicker();
+  _playerHistoryPushed = false;
+
+  // Clean up embed player
+  const embedIframe = document.getElementById('embed-iframe');
+  const embedWrap = document.getElementById('embed-player-wrap');
+  if (embedIframe) embedIframe.src = '';
+  if (embedWrap) embedWrap.classList.add('hidden');
+  video.classList.remove('hidden');
+  document.querySelector('#player-ui .player-bottom-bar')?.classList.remove('hidden');
+  document.querySelector('#player-settings-btn')?.classList.remove('hidden');
+  const playerUi = document.getElementById('player-ui');
+  if (playerUi) {
+    playerUi.classList.remove('embed-mode');
+    playerUi.style.pointerEvents = '';
+    playerUi.querySelector('.player-top-bar').style.pointerEvents = '';
+  }
+  isEmbedMode = false;
 
   video.pause();
   video.querySelectorAll('track').forEach(t => t.remove());

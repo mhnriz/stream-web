@@ -88,6 +88,15 @@
     <div id="player-overlay" class="player-overlay hidden" role="dialog" aria-label="Video player">
       <div class="player-wrapper">
         <video id="video-player" crossorigin="anonymous"></video>
+        <!-- Embed player (Vidsync, VIDEASY, etc.) -->
+        <div id="embed-player-wrap" class="hidden" style="position:absolute;inset:0;z-index:1">
+          <iframe id="embed-iframe" style="width:100%;height:100%;border:none" allowfullscreen allow="autoplay;fullscreen;encrypted-media;picture-in-picture"></iframe>
+        </div>
+        <!-- Stream picker (auto-select on play) -->
+        <div id="stream-picker" class="stream-picker hidden">
+          <div class="picker-header">Selecting stream<span id="picker-auto" class="hidden"> · auto in <b id="picker-count">2</b>s</span></div>
+          <div id="picker-list" class="picker-list"></div>
+        </div>
         <div id="player-buffering" class="player-buffering">
           <div class="buffering-bars">
             <span></span><span></span><span></span><span></span><span></span>

@@ -6,8 +6,40 @@ import API from '../api.js?v=1.3.8';
 import store from '../store.js?v=1.3.8';
 import { toast, renderContentRow, formatTime, renderResponsiveImage } from '../components.js?v=1.3.8';
 
+function buildNextEpisode(season, episode, meta) {
+  if (!season || !episode || !meta.seasons) return null;
+  const epNum = parseInt(episode), sNum = parseInt(season);
+  const cur = meta.seasons.find(s => s.number === sNum);
+  if (cur && epNum < cur.episodes) return { season: sNum, episode: epNum + 1 };
+  const next = meta.seasons.find(s => s.number === sNum + 1);
+  return next ? { season: sNum + 1, episode: 1 } : null;
+}
+
+async function openWithPicker(meta, type, season, episode) {
+  const title = meta.title + (season ? ` S${season}E${episode}` : '');
+  toast('Finding streams…', 'info');
+  try {
+    const [streams, continueList] = await Promise.all([
+      API.getStreams(type, meta.id, season, episode, meta.runtime, meta.tmdbId),
+      API.getContinueWatching().catch(() => []),
+    ]);
+    if (!streams.length) { toast('No streams found', 'error'); return; }
+    const continueId = meta.id + (season ? `:${season}:${episode}` : '');
+    const saved = continueList.find(c => c.id === continueId);
+    const resumeTime = saved?.currentTime > 10 ? saved.currentTime : 0;
+    window.dispatchEvent(new CustomEvent('hs-open-picker', {
+      detail: { streams, title, meta, season, episode, nextEpisode: buildNextEpisode(season, episode, meta), resumeTime },
+    }));
+  } catch (err) {
+    toast('Failed to load streams: ' + err.message, 'error');
+  }
+}
+
 export default async function renderDetails(container, router, params) {
   const { type, id } = params;
+
+  // Tear down any listeners from the previous details render
+  container.dispatchEvent(new Event('hs-destroy'));
 
   container.innerHTML = `
     <div class="detail-hero">
@@ -157,10 +189,8 @@ export default async function renderDetails(container, router, params) {
     if (btn) btn.setAttribute('fill', res.added ? 'currentColor' : 'none');
   });
 
-  // ─── Load Streams (for movies) ────────────────────────────
-  if (type === 'movie') {
-    loadStreams(container, meta.id, type, null, null, meta, router);
-  }
+  // Streams section hidden — picker handles stream selection
+  container.querySelector('#streams-section')?.classList.add('hidden');
 
   // ─── TASK-02: Smart Resume — update play button if previously watched ──
   try {
@@ -225,23 +255,7 @@ export default async function renderDetails(container, router, params) {
   // ─── Play Button ──────────────────────────────────────────
   container.querySelector('#detail-play-btn')?.addEventListener('click', () => {
     if (type === 'movie') {
-      const streamsSection = container.querySelector('#streams-section');
-      if (streamsSection) {
-        const top = streamsSection.getBoundingClientRect().top + window.scrollY - 24;
-        window.scrollTo({ top, behavior: 'smooth' });
-      }
-      // If resume time set, seek after player opens
-      const resumeTime = container.querySelector('#detail-play-btn')?.dataset?.resumeTime;
-      if (resumeTime) {
-        const handler = (e) => {
-          const video = document.getElementById('video-player');
-          if (video) {
-            video.addEventListener('canplay', () => { video.currentTime = parseFloat(resumeTime); }, { once: true });
-          }
-          window.removeEventListener('hs-play', handler);
-        };
-        window.addEventListener('hs-play', handler, { once: true });
-      }
+      openWithPicker(meta, type, null, null);
     } else {
       // Check for resume episode (from end card navigation or continue-watching)
       const btn = container.querySelector('#detail-play-btn');
@@ -268,6 +282,24 @@ export default async function renderDetails(container, router, params) {
       }
     }
   });
+
+  // ─── Refresh play button after player closes ──────────────
+  const _onPlayerClosed = (e) => {
+    const { currentTime, duration, season: s, episode: ep } = e.detail;
+    const playBtn = container.querySelector('#detail-play-btn');
+    if (!playBtn) return;
+    if (type === 'series' && s && ep) {
+      playBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"/></svg> Resume S${s}E${ep}`;
+      playBtn.dataset.resumeSeason = s;
+      playBtn.dataset.resumeEpisode = ep;
+    } else if (type === 'movie' && currentTime > 10 && duration > 0) {
+      const pct = Math.round((currentTime / duration) * 100);
+      playBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21"/></svg> Resume ${pct}%`;
+      playBtn.dataset.resumeTime = currentTime;
+    }
+  };
+  window.addEventListener('hs-player-closed', _onPlayerClosed);
+  container.addEventListener('hs-destroy', () => window.removeEventListener('hs-player-closed', _onPlayerClosed), { once: true });
 
   // ─── Similar Titles ───────────────────────────────────────
   if (meta.similar?.length) {
@@ -351,19 +383,7 @@ async function loadEpisodes(container, meta, seasonNum, router, continueList = [
         const e = ep.dataset.episode;
         const epTitle = ep.dataset.title;
 
-        // Update the streams section title
-        const streamsTitle = container.querySelector('#streams-title');
-        if (streamsTitle) streamsTitle.textContent = `Streams — S${s}E${e} · ${epTitle}`;
-
-        // Load into the bottom streams section
-        loadStreams(container, meta.id, 'series', s, e, meta, router);
-
-        // Scroll to streams section — vertical only, no horizontal drift
-        const streamsSection = container.querySelector('#streams-section');
-        if (streamsSection) {
-          const top = streamsSection.getBoundingClientRect().top + window.scrollY - 24;
-          window.scrollTo({ top, behavior: 'smooth' });
-        }
+        openWithPicker(meta, 'series', s, e);
       });
     });
   } catch {
@@ -383,7 +403,7 @@ async function loadStreams(container, imdbId, type, season, episode, meta, route
   `;
 
   try {
-    const streams = await API.getStreams(type, imdbId, season, episode, meta.runtime);
+    const streams = await API.getStreams(type, imdbId, season, episode, meta.runtime, meta.tmdbId);
 
     if (!streams.length) {
       streamsList.innerHTML = '<p style="color:var(--text-dim);padding:16px">No streams found for this title.</p>';
@@ -418,44 +438,33 @@ async function loadStreams(container, imdbId, type, season, episode, meta, route
 
     // Click to play
     const playStream = async (stream, streamIdx = 0) => {
+      const streamInfo = {
+        quality: stream.quality,
+        source: stream.source,
+        codec: stream.codec,
+        size: stream.size,
+        tracker: stream.tracker || stream.addonName,
+      };
+      const baseDetail = {
+        title: meta.title + (season ? ` S${season}E${episode}` : ''),
+        meta, season, episode,
+        nextEpisode: buildNextEpisode(season, episode, meta),
+        streams, currentStreamIdx: streamIdx, streamInfo,
+      };
+
+      // Embed source — open iframe player directly, no server call
+      if (stream.embedUrl) {
+        window.dispatchEvent(new CustomEvent('hs-play', {
+          detail: { ...baseDetail, embedUrl: stream.embedUrl, embedSource: stream.embedSource },
+        }));
+        return;
+      }
+
       toast('Resolving stream...', 'info');
       try {
         const playbackUrl = await API.resolvePlayback(stream);
-
-        // Build next episode info for Up Next card
-        let nextEpisode = null;
-        if (season && episode && meta.seasons) {
-          const epNum = parseInt(episode);
-          const sNum = parseInt(season);
-          // Check if next episode exists in current season
-          const currentSeason = meta.seasons.find(s => s.number === sNum);
-          if (currentSeason && epNum < currentSeason.episodes) {
-            nextEpisode = { season: sNum, episode: epNum + 1 };
-          } else {
-            // Try next season
-            const nextSeason = meta.seasons.find(s => s.number === sNum + 1);
-            if (nextSeason) nextEpisode = { season: sNum + 1, episode: 1 };
-          }
-        }
-
         window.dispatchEvent(new CustomEvent('hs-play', {
-          detail: {
-            url: playbackUrl,
-            title: meta.title + (season ? ` S${season}E${episode}` : ''),
-            meta,
-            season,
-            episode,
-            nextEpisode,
-            streams,         // pass full streams array for source switching (TASK-09)
-            currentStreamIdx: streamIdx,
-            streamInfo: {
-              quality: stream.quality,
-              source: stream.source,
-              codec: stream.codec,
-              size: stream.size,
-              tracker: stream.tracker || stream.addonName,
-            },
-          },
+          detail: { ...baseDetail, url: playbackUrl },
         }));
       } catch (err) {
         toast('Failed to resolve stream: ' + err.message, 'error');
